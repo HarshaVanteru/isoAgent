@@ -3,8 +3,8 @@ import pytest
 from pypdf import PdfWriter
 from pypdf.generic import DictionaryObject, NameObject, DecodedStreamObject
 
-from backend.app.core.errors import InvalidFile
-from backend.app.ingestion.parser import DoclingParser
+from app.core.errors import InvalidFile
+from app.ingestion.parser import DoclingParser
 from tests.test_local_rag import pipeline
 
 

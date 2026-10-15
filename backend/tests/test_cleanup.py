@@ -2,9 +2,9 @@ import os
 import shutil
 import pytest
 
-from backend.app.utils.cleanup import remove_tree
-from backend.app.ingestion.converter import OfficeConverter
-from backend.app.core.config import Settings
+from app.utils.cleanup import remove_tree
+from app.ingestion.converter import OfficeConverter
+from app.core.config import Settings
 
 
 def test_cleanup_retries_transient_directory_busy(tmp_path, monkeypatch):

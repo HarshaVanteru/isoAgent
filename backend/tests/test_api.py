@@ -3,13 +3,13 @@ from uuid import uuid4
 from fastapi.testclient import TestClient
 from langgraph.checkpoint.memory import MemorySaver
 
-from backend.app.conversation.graph import build_graph
-from backend.app.main import app
+from app.conversation.graph import build_graph
+from app.main import app
 from tests.test_graph import FakeIndex, FakeLLM
 
 
 def test_api_answers_and_followups_without_approval(monkeypatch):
-    from backend.app import main
+    from app import main
     monkeypatch.setattr(main.settings, 'groq_api_key', 'test-key')
     with TestClient(app) as client:
         app.state.graph = build_graph(FakeIndex(), FakeLLM(), MemorySaver())
@@ -31,7 +31,7 @@ def test_api_answers_and_followups_without_approval(monkeypatch):
 
 
 def test_query_requires_separate_ingestion(monkeypatch):
-    from backend.app import main
+    from app import main
     monkeypatch.setattr(main.index, 'report', lambda: {'chunks': 0})
     monkeypatch.setattr(main.settings, 'groq_api_key', 'test-key')
     with TestClient(app) as client:
@@ -40,12 +40,12 @@ def test_query_requires_separate_ingestion(monkeypatch):
         response = client.post(f'/api/threads/{uuid4()}/messages',
                                json={'question': 'Suppliers?'})
         assert response.status_code == 409
-        assert 'backend.app.ingest' in response.json()['detail']
+        assert 'python -m app.ingest' in response.json()['detail']
 
 
 def test_saved_review_draft_is_returned_as_answer_without_approval():
     from langgraph.graph import START, END, StateGraph
-    from backend.app.conversation.state import ChatState
+    from app.conversation.state import ChatState
     saver = MemorySaver()
     thread_id = uuid4()
     config = {'configurable': {'thread_id': str(thread_id)}}
@@ -68,7 +68,7 @@ def test_saved_review_draft_is_returned_as_answer_without_approval():
 
 
 def test_greeting_works_without_indexed_documents(monkeypatch):
-    from backend.app import main
+    from app import main
     monkeypatch.setattr(main.index, 'report', lambda: {'chunks': 0})
     monkeypatch.setattr(main.settings, 'groq_api_key', 'test-key')
     with TestClient(app) as client:
@@ -83,7 +83,7 @@ def test_greeting_works_without_indexed_documents(monkeypatch):
 
 
 def test_clarification_api_resume_and_conflicts(monkeypatch):
-    from backend.app import main
+    from app import main
     monkeypatch.setattr(main.settings, 'groq_api_key', 'test-key')
     llm = FakeLLM(analyses=[
         {'clear': False, 'standalone_query': 'control', 'clarification_question': 'Which procedure?'},

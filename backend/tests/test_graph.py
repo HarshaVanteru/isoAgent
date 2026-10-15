@@ -6,7 +6,7 @@ import pytest
 from langchain_core.messages import AIMessage
 from langgraph.checkpoint.sqlite import SqliteSaver
 
-from backend.app.conversation.graph import build_graph
+from app.conversation.graph import build_graph
 
 
 class FakeIndex:
@@ -106,7 +106,7 @@ def test_no_evidence_does_not_hallucinate():
     ('Evaluate suppliers annually.', False),
 ])
 def test_citation_retry_preserves_nonconsecutive_source_numbers(corrected, accepted):
-    from backend.app.conversation.nodes import ConversationNodes
+    from app.conversation.nodes import ConversationNodes
 
     class DraftLLM:
         def __init__(self):
@@ -124,7 +124,7 @@ def test_citation_retry_preserves_nonconsecutive_source_numbers(corrected, accep
     assert '[1], [3]' in nodes.llm.calls[-1][-1].content
     assert result['sources'] == sources
     if accepted:
-        from backend.app.conversation.nodes import normalize_citations
+        from app.conversation.nodes import normalize_citations
         assert result['draft'] == normalize_citations(corrected)
     else:
         assert result['evidence_sufficient'] is False

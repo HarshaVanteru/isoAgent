@@ -12,17 +12,17 @@ from tokenizers.models import WordLevel
 from tokenizers.pre_tokenizers import Whitespace
 from transformers import PreTrainedTokenizerFast
 
-from backend.app.core.config import Settings
-from backend.app.core.errors import ConversionError, InvalidFile, IndexConfigurationError, ParsingError
-from backend.app.ingestion.converter import OfficeConverter
-from backend.app.ingestion.parser import DoclingParser
-from backend.app.ingestion.chunker import StructuredChunker
-from backend.app.ingestion.metadata import document_type
-from backend.app.models.responses import SearchHit
-from backend.app.retrieval.retriever import Retriever
-from backend.app.services.ingestion_service import IngestionService
-from backend.app.services.search_service import SearchService
-from backend.app.vectorstore.qdrant_store import QdrantStore
+from app.core.config import Settings
+from app.core.errors import ConversionError, InvalidFile, IndexConfigurationError, ParsingError
+from app.ingestion.converter import OfficeConverter
+from app.ingestion.parser import DoclingParser
+from app.ingestion.chunker import StructuredChunker
+from app.ingestion.metadata import document_type
+from app.models.responses import SearchHit
+from app.retrieval.retriever import Retriever
+from app.services.ingestion_service import IngestionService
+from app.services.search_service import SearchService
+from app.vectorstore.qdrant_store import QdrantStore
 
 
 class TestEmbeddings:
@@ -185,7 +185,7 @@ def test_collection_model_mismatch(pipeline):
 
 
 def test_embedded_qdrant_persists_after_reopen(tmp_path):
-    from backend.app.models.responses import Chunk
+    from app.models.responses import Chunk
     settings = Settings(_env_file=None, data_dir=tmp_path / 'data',
                         qdrant_path=str(tmp_path / 'qdrant'))
     store = QdrantStore(settings)
@@ -242,7 +242,7 @@ def test_spreadsheet_original_row_numbers_and_singletons(pipeline):
 
 
 def test_model_failure_does_not_delete_prior_document(pipeline, monkeypatch):
-    from backend.app.core.errors import ModelError
+    from app.core.errors import ModelError
     p = pipeline
     path = make_doc(p.settings.document_dir / 'policy.docx')
     result = p.ingestion.ingest_file(path)
@@ -256,7 +256,7 @@ def test_model_failure_does_not_delete_prior_document(pipeline, monkeypatch):
 
 
 def test_partial_insert_is_cleaned_and_can_retry(pipeline, monkeypatch):
-    from backend.app.core.errors import StorageError
+    from app.core.errors import StorageError
     p = pipeline
     path = make_doc(p.settings.document_dir / 'policy.docx', text='Supplier policy. ' * 60)
     original = p.store.insert
@@ -274,8 +274,8 @@ def test_partial_insert_is_cleaned_and_can_retry(pipeline, monkeypatch):
 def test_model_services_load_once_and_rerank(pipeline, monkeypatch):
     import numpy as np
     import sentence_transformers
-    from backend.app.embeddings.bge_embeddings import BGEEmbeddings
-    from backend.app.retrieval.reranker import BGEReranker
+    from app.embeddings.bge_embeddings import BGEEmbeddings
+    from app.retrieval.reranker import BGEReranker
     created = []
     class Encoder:
         def __init__(self, name, **kwargs):
@@ -331,8 +331,8 @@ def test_slides_never_merge_across_boundaries(pipeline):
 
 def test_api_local_search_and_document_lifecycle(pipeline):
     from fastapi.testclient import TestClient
-    from backend.app.main import app
-    from backend.app.api.dependencies import get_services
+    from app.main import app
+    from app.api.dependencies import get_services
     p = pipeline
     app.dependency_overrides[get_services] = lambda: p
     try:
@@ -355,8 +355,8 @@ def test_api_local_search_and_document_lifecycle(pipeline):
 def test_graph_uses_real_qdrant_candidates_and_reranks_union_once(pipeline, monkeypatch):
     from langchain_core.messages import AIMessage
     from langgraph.checkpoint.memory import MemorySaver
-    from backend.app.conversation.graph import build_graph
-    from backend.app.services.document_index import DocumentIndex
+    from app.conversation.graph import build_graph
+    from app.services.document_index import DocumentIndex
     from tests.test_graph import FakeLLM
     p = pipeline
     p.ingestion.ingest_file(make_doc(p.settings.document_dir / 'supplier.docx'))
@@ -382,7 +382,7 @@ def test_graph_uses_real_qdrant_candidates_and_reranks_union_once(pipeline, monk
 
 
 def test_rank_fusion_deduplicates_across_queries(pipeline):
-    from backend.app.services.search_service import SearchService
+    from app.services.search_service import SearchService
     def hit(identity, score):
         return SearchHit(text=identity, score=score, vector_score=score, metadata={'chunk_id': identity})
     class Retriever:

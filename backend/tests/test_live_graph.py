@@ -9,8 +9,8 @@ pytestmark = pytest.mark.skipif(os.getenv('RUN_GROQ_TESTS') != '1', reason='Opt-
 def test_live_router_analysis_quality_and_clarification():
     from langchain_groq import ChatGroq
     from langgraph.checkpoint.memory import MemorySaver
-    from backend.app.core.config import settings
-    from backend.app.conversation.graph import build_graph
+    from app.core.config import settings
+    from app.conversation.graph import build_graph
     from tests.test_graph import FakeIndex
     if not settings.groq_api_key:
         pytest.skip('GROQ_API_KEY not configured')

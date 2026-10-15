@@ -3,8 +3,8 @@ import pytest
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.checkpoint.sqlite import SqliteSaver
 
-from backend.app.core.config import Settings
-from backend.app.conversation.graph import build_graph
+from app.core.config import Settings
+from app.conversation.graph import build_graph
 from tests.test_graph import FakeIndex, FakeLLM
 
 CONFIG = {'configurable': {'thread_id': 'flow'}}
@@ -120,7 +120,7 @@ def test_clarification_survives_restart_and_is_reanalyzed(tmp_path):
 
 def test_existing_review_checkpoint_remains_resumable(tmp_path):
     from langgraph.graph import START, END, StateGraph
-    from backend.app.conversation.state import ChatState
+    from app.conversation.state import ChatState
     path = tmp_path / 'old-review.sqlite'
     with sqlite3.connect(path, check_same_thread=False) as connection:
         old = StateGraph(ChatState)

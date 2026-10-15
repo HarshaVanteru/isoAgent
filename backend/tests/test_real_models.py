@@ -7,8 +7,8 @@ pytestmark = pytest.mark.skipif(os.getenv('RUN_MODEL_TESTS') != '1', reason='Opt
 
 def test_real_bge_docling_qdrant_end_to_end(tmp_path):
     from docx import Document
-    from backend.app.core.config import Settings
-    from backend.app.services.container import Services
+    from app.core.config import Settings
+    from app.services.container import Services
     settings = Settings(_env_file=None, document_dir=tmp_path / 'docs',
         data_dir=tmp_path / 'data', qdrant_path=':memory:')
     settings.document_dir.mkdir()

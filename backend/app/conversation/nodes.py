@@ -109,7 +109,7 @@ class ConversationNodes:
 
     def retrieval(self, state):
         if hasattr(self.index, 'report') and not self.index.report().get('chunks'):
-            raise CorpusUnavailable('Run python -m backend.app.ingest before querying documents.')
+            raise CorpusUnavailable('Run python -m app.ingest before querying documents.')
         category = state.get('category', '')
         candidates = self.index.retrieve_candidates(state['queries'], category)
         return {**self.trace(state, 'retrieval'), 'candidates': candidates,

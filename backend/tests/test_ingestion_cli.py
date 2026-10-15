@@ -1,7 +1,7 @@
 from types import SimpleNamespace
 import pytest
-from backend.app import ingest
-from backend.app.core.errors import StorageError
+from app import ingest
+from app.core.errors import StorageError
 
 
 @pytest.mark.parametrize('error,expected', [(StorageError('Database unavailable'), 1), (KeyboardInterrupt(), 130)])

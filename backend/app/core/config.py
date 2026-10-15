@@ -3,22 +3,22 @@ from typing import Literal
 from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-ROOT = Path(__file__).resolve().parents[3]
+BACKEND_DIR = Path(__file__).resolve().parents[2]
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=ROOT / '.env', extra='ignore')
+    model_config = SettingsConfigDict(env_file=BACKEND_DIR / '.env', extra='ignore')
     groq_api_key: str = ''
     groq_model: str = 'openai/gpt-oss-120b'
-    document_dir: Path = ROOT / 'ISO 9001 Full Documents'
-    data_dir: Path = ROOT / 'data'
+    document_dir: Path = BACKEND_DIR / 'ISO 9001 Full Documents'
+    data_dir: Path = BACKEND_DIR / 'data'
     soffice_path: str = ''
     libreoffice_path: str = ''
     conversion_timeout: int = Field(default=120, ge=1)
     embedding_model: str = 'BAAI/bge-m3'
     reranker_model: str = 'BAAI/bge-reranker-v2-m3'
     model_device: str = 'cpu'
-    model_cache_dir: Path = ROOT / '.cache' / 'huggingface' / 'hub'
+    model_cache_dir: Path = BACKEND_DIR / '.cache' / 'huggingface' / 'hub'
     model_local_files_only: bool = False
     embedding_batch_size: int = Field(default=16, ge=1, le=512)
     reranker_batch_size: int = Field(default=8, ge=1, le=128)
@@ -43,9 +43,9 @@ class Settings(BaseSettings):
     def paths_and_limits(self):
         for name in ('document_dir', 'data_dir', 'model_cache_dir'):
             value = getattr(self, name)
-            setattr(self, name, value.resolve() if value.is_absolute() else (ROOT / value).resolve())
+            setattr(self, name, value.resolve() if value.is_absolute() else (BACKEND_DIR / value).resolve())
         if self.qdrant_path and self.qdrant_path != ':memory:':
-            self.qdrant_path = str((ROOT / self.qdrant_path).resolve())
+            self.qdrant_path = str((BACKEND_DIR / self.qdrant_path).resolve())
         if self.final_result_limit > self.vector_search_limit:
             raise ValueError('FINAL_RESULT_LIMIT must not exceed VECTOR_SEARCH_LIMIT')
         return self

@@ -1,6 +1,6 @@
 import pytest
 
-from backend.app.core.errors import ModelError
+from app.core.errors import ModelError
 from tests.test_local_rag import pipeline, make_doc
 
 
@@ -44,8 +44,8 @@ def test_interruption_or_infrastructure_failure_keeps_completed_documents(pipeli
 
 def test_folder_api_returns_successes_and_file_errors_together(pipeline):
     from fastapi.testclient import TestClient
-    from backend.app.main import app
-    from backend.app.api.dependencies import get_services
+    from app.main import app
+    from app.api.dependencies import get_services
     p = pipeline
     make_doc(p.settings.document_dir / 'a.docx')
     (p.settings.document_dir / 'b.docx').write_bytes(b'broken')

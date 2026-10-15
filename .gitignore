@@ -16,8 +16,8 @@ venv/
 __pycache__/
 *.py[cod]
 *.egg-info/
-/build/
-/dist/
+/backend/build/
+/backend/dist/
 
 # Test, lint, and model caches
 .pytest_cache/
@@ -30,8 +30,8 @@ htmlcov/
 coverage.xml
 
 # Private document library and generated application data
-/ISO 9001 Full Documents/
-/data/
+/backend/ISO 9001 Full Documents/
+/backend/data/
 *.sqlite
 *.sqlite3
 *.sqlite-wal

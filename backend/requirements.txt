@@ -1,6 +1,8 @@
 # Generated from pyproject.toml; update dependency versions there first.
-# Requires Python 3.12 or newer. Run from the repository root:
+# Requires Python 3.12 or newer. Run from the backend/ directory:
 #   python -m pip install -r requirements.txt
+# On Linux without a GPU, install CPU wheels first to avoid multi-GB CUDA downloads:
+#   python -m pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
 #
 # Node.js/npm, LibreOffice, and Docker/Qdrant are installed separately.
 
