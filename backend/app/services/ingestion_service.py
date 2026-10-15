@@ -44,10 +44,6 @@ class IngestionService:
 
     def ingest_file(self, path, force=False, source=None):
         with self.lock:
-            return self._ingest_file(path, force, source)
-
-    def _ingest_file(self, path, force=False, source=None):
-        with self.lock:
             path = Path(path)
             validate_file(path)
             source = source or (path.relative_to(self.settings.document_dir).as_posix()
@@ -121,10 +117,6 @@ class IngestionService:
 
     def ingest_folder(self, folder=None, force=False):
         with self.lock:
-            return self._ingest_folder(folder, force)
-
-    def _ingest_folder(self, folder=None, force=False):
-        with self.lock:
             root = self.settings.document_dir
             folder = within_root(Path(folder) if folder else root, root)
             if not folder.is_dir():
@@ -186,26 +178,23 @@ class IngestionService:
 
     def upload(self, stream, filename, force=False):
         with self.lock:
-            return self._upload(stream, filename, force)
-
-    def _upload(self, stream, filename, force=False):
-        safe_name = Path(filename.replace('\\', '/')).name
-        if not safe_name or Path(safe_name).suffix.lower() not in SUPPORTED:
-            raise InvalidFile('Unsupported upload filename or file type')
-        raw = self.settings.data_dir / 'raw'
-        raw.mkdir(parents=True, exist_ok=True)
-        with tempfile.TemporaryDirectory(dir=raw) as work:
-            temporary = Path(work) / safe_name
-            size = 0
-            with temporary.open('wb') as output:
-                while block := stream.read(1024 * 1024):
-                    size += len(block)
-                    if size > self.settings.upload_max_bytes:
-                        raise InvalidFile('Upload exceeds UPLOAD_MAX_BYTES')
-                    output.write(block)
-            validate_file(temporary)
-            target = raw / content_hash(temporary) / safe_name
-            target.parent.mkdir(parents=True, exist_ok=True)
-            if not target.exists():
-                temporary.replace(target)
-            return self.ingest_file(target, force, source=f'uploads/{safe_name}')
+            safe_name = Path(filename.replace('\\', '/')).name
+            if not safe_name or Path(safe_name).suffix.lower() not in SUPPORTED:
+                raise InvalidFile('Unsupported upload filename or file type')
+            raw = self.settings.data_dir / 'raw'
+            raw.mkdir(parents=True, exist_ok=True)
+            with tempfile.TemporaryDirectory(dir=raw) as work:
+                temporary = Path(work) / safe_name
+                size = 0
+                with temporary.open('wb') as output:
+                    while block := stream.read(1024 * 1024):
+                        size += len(block)
+                        if size > self.settings.upload_max_bytes:
+                            raise InvalidFile('Upload exceeds UPLOAD_MAX_BYTES')
+                        output.write(block)
+                validate_file(temporary)
+                target = raw / content_hash(temporary) / safe_name
+                target.parent.mkdir(parents=True, exist_ok=True)
+                if not target.exists():
+                    temporary.replace(target)
+                return self.ingest_file(target, force, source=f'uploads/{safe_name}')

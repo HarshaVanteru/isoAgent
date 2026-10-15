@@ -1,0 +1,76 @@
+.shell {
+  display: flex;
+  height: 100dvh;
+  overflow: hidden;
+}
+
+.skipLink {
+  position: absolute;
+  top: -100px;
+  left: var(--space-4);
+  z-index: 100;
+  padding: var(--space-2) var(--space-4);
+  color: var(--color-on-brand);
+  background: var(--color-brand);
+  border-radius: var(--radius-sm);
+}
+
+.skipLink:focus {
+  top: var(--space-4);
+}
+
+.sidebar {
+  flex-shrink: 0;
+  width: var(--sidebar-width);
+  overflow-y: auto;
+  background: var(--color-sidebar);
+  border-right: 1px solid var(--color-border);
+}
+
+.main {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.content {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  outline: none;
+}
+
+.backdrop {
+  display: none;
+}
+
+@media (max-width: 900px) {
+  .sidebar {
+    position: fixed;
+    inset: 0 auto 0 0;
+    z-index: 40;
+    width: min(var(--sidebar-width), 85vw);
+    visibility: hidden;
+    box-shadow: var(--shadow-md);
+    transform: translateX(-100%);
+    transition:
+      transform 200ms ease,
+      visibility 0s linear 200ms;
+  }
+
+  .shell[data-drawer-open] .sidebar {
+    visibility: visible;
+    transform: none;
+    transition: transform 200ms ease;
+  }
+
+  .backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 30;
+    display: block;
+    background: rgb(10 20 14 / 0.45);
+  }
+}

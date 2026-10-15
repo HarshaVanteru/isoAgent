@@ -1,6 +1,7 @@
 """Chat HTTP endpoints; conversation behavior lives in ConversationService."""
 from uuid import UUID, uuid4
-from fastapi import APIRouter, Request
+from fastapi import APIRouter
+from ..dependencies import ConversationsDep
 from ...models.requests import Question, ClarificationReply, Review
 
 router = APIRouter(prefix='/api/threads', tags=['chat'])
@@ -12,20 +13,20 @@ def create_thread():
 
 
 @router.get('/{thread_id}')
-def get_thread(thread_id: UUID, request: Request):
-    return request.app.state.conversations.get_thread(thread_id)
+def get_thread(thread_id: UUID, conversations: ConversationsDep):
+    return conversations.get_thread(thread_id)
 
 
 @router.post('/{thread_id}/messages')
-def ask(thread_id: UUID, body: Question, request: Request):
-    return request.app.state.conversations.ask(thread_id, body)
+def ask(thread_id: UUID, body: Question, conversations: ConversationsDep):
+    return conversations.ask(thread_id, body)
 
 
 @router.post('/{thread_id}/clarify')
-def clarify(thread_id: UUID, body: ClarificationReply, request: Request):
-    return request.app.state.conversations.clarify(thread_id, body)
+def clarify(thread_id: UUID, body: ClarificationReply, conversations: ConversationsDep):
+    return conversations.clarify(thread_id, body)
 
 
 @router.post('/{thread_id}/review')
-def review(thread_id: UUID, body: Review, request: Request):
-    return request.app.state.conversations.review(thread_id, body)
+def review(thread_id: UUID, body: Review, conversations: ConversationsDep):
+    return conversations.review(thread_id, body)

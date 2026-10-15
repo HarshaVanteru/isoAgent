@@ -1,0 +1,10 @@
+.spinner {
+  flex-shrink: 0;
+  animation: spin 1.2s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

@@ -1,0 +1,41 @@
+# Nginx site for the ISO Knowledge Assistant.
+# Serves the built frontend (rsynced by .github/workflows/frontend.yml) and proxies /api
+# to the backend container (backend/deploy/compose.yaml publishes it on 127.0.0.1:8000).
+# Install: copy to /etc/nginx/sites-available/iso-agent, set server_name, enable, add TLS
+# (e.g. certbot --nginx), then `sudo nginx -t && sudo systemctl reload nginx`.
+
+server {
+    listen 80;
+    server_name iso.example.com;
+
+    root /var/www/html/iso-agent/frontend;
+    index index.html;
+
+    # Matches the backend's UPLOAD_MAX_BYTES (50 MB) for document uploads.
+    client_max_body_size 50m;
+
+    location /api/ {
+        proxy_pass http://127.0.0.1:8000;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        # Answers run retrieval plus several LLM calls; allow slow requests.
+        proxy_read_timeout 180s;
+        proxy_send_timeout 180s;
+    }
+
+    # Vite emits content-hashed file names, so they can be cached forever.
+    location /assets/ {
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+        try_files $uri =404;
+    }
+
+    # Single-page app: unknown paths fall back to index.html, which is never cached.
+    location / {
+        add_header Cache-Control "no-cache";
+        try_files $uri $uri/ /index.html;
+    }
+}
