@@ -37,6 +37,7 @@ describe('AppShell', () => {
     await user.click(menu);
     await user.click(screen.getByRole('button', { name: 'Document library' }));
     expect(menu).toHaveAttribute('aria-expanded', 'false');
+    expect(menu).toHaveFocus();
   });
 
   it('exposes landmarks and a skip link', () => {

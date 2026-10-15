@@ -15,7 +15,11 @@ export function AppShell({ title, sidebar, children }: AppShellProps) {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const menuButton = useRef<HTMLButtonElement>(null);
   const sidebarRef = useRef<HTMLElement>(null);
-  const closeDrawer = useCallback(() => setDrawerOpen(false), []);
+  const closeDrawer = useCallback(() => {
+    if (!drawerOpen) return;
+    setDrawerOpen(false);
+    menuButton.current?.focus();
+  }, [drawerOpen]);
 
   useEffect(() => {
     if (!drawerOpen) return;

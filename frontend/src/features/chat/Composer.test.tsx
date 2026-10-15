@@ -52,6 +52,15 @@ describe('Composer', () => {
     expect(onSubmit).not.toHaveBeenCalled();
   });
 
+  it('does not send on the Enter that confirms an IME candidate in Safari', () => {
+    const onSubmit = vi.fn();
+    render(<Harness onSubmit={onSubmit} />);
+    const box = screen.getByRole('textbox', { name: 'Your question' });
+    fireEvent.change(box, { target: { value: 'にほん' } });
+    fireEvent.keyDown(box, { key: 'Enter', keyCode: 229 });
+    expect(onSubmit).not.toHaveBeenCalled();
+  });
+
   it('offers the document categories', () => {
     render(<Harness onSubmit={vi.fn()} />);
     const select = screen.getByRole('combobox', { name: 'Document category' });

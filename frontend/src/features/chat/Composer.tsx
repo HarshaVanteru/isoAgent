@@ -52,7 +52,9 @@ export function Composer({
   };
 
   const onKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
-    if (event.key !== 'Enter' || event.shiftKey || event.nativeEvent.isComposing) return;
+    // Safari fires the IME-confirming Enter after compositionend, flagged only by keyCode 229.
+    const composing = event.nativeEvent.isComposing || event.nativeEvent.keyCode === 229;
+    if (event.key !== 'Enter' || event.shiftKey || composing) return;
     event.preventDefault();
     if (canSend) onSubmit();
   };

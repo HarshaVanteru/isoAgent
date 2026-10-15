@@ -32,6 +32,9 @@ coverage.xml
 # Private document library and generated application data
 /backend/ISO 9001 Full Documents/
 /backend/data/
+# Pre-restructure locations; keep ignored until existing clones move them into backend/.
+/ISO 9001 Full Documents/
+/data/
 *.sqlite
 *.sqlite3
 *.sqlite-wal
