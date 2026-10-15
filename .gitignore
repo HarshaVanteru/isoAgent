@@ -9,7 +9,7 @@
 *.key
 *.p12
 *.pfx
-
+docs
 # Python environments, bytecode, and packaging output
 .venv/
 venv/
