@@ -1,0 +1,99 @@
+:root {
+  color-scheme: light;
+
+  --font-sans: 'DM Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-display: 'Manrope', var(--font-sans);
+  --font-mono: ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+
+  --text-2xs: 0.6875rem;
+  --text-xs: 0.75rem;
+  --text-sm: 0.8125rem;
+  --text-base: 0.9375rem;
+  --text-xl: 1.75rem;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-pill: 999px;
+
+  --color-bg: #fbfcf9;
+  --color-surface: #ffffff;
+  --color-surface-muted: #f3f6ef;
+  --color-sidebar: #f3f5ee;
+  --color-border: #e3e8dc;
+  --color-border-strong: #d0dac4;
+  --color-text: #263b34;
+  --color-text-muted: #5c6956;
+  --color-text-subtle: #6d7a64;
+  --color-brand: #1f493a;
+  --color-brand-hover: #2f6150;
+  --color-on-brand: #eef5e2;
+  --color-accent: #7fa361;
+  --color-accent-soft: #e8efdf;
+  --color-accent-text: #3d6a35;
+  --color-nav-active: #e0e9d8;
+  --color-hover: #edf2eb;
+  --color-focus: #4f8a5b;
+  --color-warning-bg: #f6f1dc;
+  --color-warning-text: #6e5f22;
+  --color-warning-border: #e7dfbf;
+  --color-danger-bg: #fbefea;
+  --color-danger-text: #96442f;
+  --color-danger-border: #f0d8ce;
+  --color-success-bg: #e5efdb;
+  --color-success-text: #3a652b;
+
+  --shadow-sm: 0 1px 2px rgb(31 57 35 / 0.06);
+  --shadow-md: 0 6px 24px rgb(31 57 35 / 0.08);
+
+  --sidebar-width: 272px;
+  --header-height: 64px;
+  --content-width: 760px;
+  --transition-fast: 150ms ease;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+
+    --color-bg: #111814;
+    --color-surface: #172019;
+    --color-surface-muted: #1c261f;
+    --color-sidebar: #141c17;
+    --color-border: #27332b;
+    --color-border-strong: #364539;
+    --color-text: #e3ebe2;
+    --color-text-muted: #aebaab;
+    --color-text-subtle: #929f8f;
+    --color-brand: #9cc98a;
+    --color-brand-hover: #b3d8a3;
+    --color-on-brand: #10200f;
+    --color-accent: #8fbf6f;
+    --color-accent-soft: #213024;
+    --color-accent-text: #aed69b;
+    --color-nav-active: #22322a;
+    --color-hover: #1f2a22;
+    --color-focus: #9cc98a;
+    --color-warning-bg: #2b2716;
+    --color-warning-text: #e6d697;
+    --color-warning-border: #433c1e;
+    --color-danger-bg: #2e1c17;
+    --color-danger-text: #f2ad99;
+    --color-danger-border: #4a2a21;
+    --color-success-bg: #1f2e1d;
+    --color-success-text: #aed69b;
+
+    --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.35);
+    --shadow-md: 0 6px 24px rgb(0 0 0 / 0.4);
+  }
+}
