@@ -145,6 +145,7 @@ is designed for local use with one backend worker.
 
 ```text
 README.md
+.github/workflows/          Backend and frontend CI/CD pipelines
 backend/                    Python project (run backend commands here)
   app/
     main.py                 FastAPI assembly and resource lifecycle
@@ -167,6 +168,8 @@ backend/                    Python project (run backend commands here)
   requirements.txt          Generated dependencies and editable install
   compose.yaml              Local Qdrant service
   .env.example              Backend configuration template
+  Dockerfile                Production image (CPU PyTorch, LibreOffice, non-root)
+  deploy/                   Server compose stack and server .env template
 frontend/                   React / TypeScript / Vite project
   src/
     app/                    App root, layout shell, view switching
@@ -177,6 +180,7 @@ frontend/                   React / TypeScript / Vite project
     hooks/ lib/             Health hook; citation, storage, and small helpers
     styles/                 Design tokens (light/dark) and base styles
   .env.example              Frontend configuration template
+  deploy/                   Nginx site example (static files + /api proxy)
 ```
 
 All backend code lives in `backend/`; all frontend code lives in `frontend/`. Qdrant is the single
@@ -270,6 +274,76 @@ $env:RUN_GROQ_TESTS = '1'
 .\.venv\Scripts\python.exe -m pytest tests/test_live_graph.py -q
 Remove-Item Env:RUN_GROQ_TESTS
 ```
+
+## Deployment (backend CI/CD)
+
+`.github/workflows/backend.yml` runs on every push to `main` that changes `backend/**`
+(or manually via **Run workflow**):
+
+1. **test** — installs CPU PyTorch and `backend/requirements.txt`, runs `pytest`.
+2. **build** — builds `backend/Dockerfile` natively on amd64 and arm64 runners and pushes
+   each by digest to `ghcr.io/harshavanteru/iso-agent-backend`.
+3. **merge** — publishes one multi-arch image tagged `latest` and the commit SHA.
+4. **deploy** — copies `backend/deploy/compose.yaml` to the server, pulls the SHA-tagged
+   image, restarts the `backend` service, and fails the run (printing logs) unless the
+   container reports healthy within three minutes.
+
+**Repository secrets** (Settings → Secrets and variables → Actions):
+
+| Secret | Value |
+| --- | --- |
+| `SERVER_HOST` / `SERVER_USERNAME` | SSH host and user of the deploy server |
+| `SERVER_SSH_KEY` | Private key for that user |
+| `GHCR_USERNAME` / `GHCR_PAT` | GitHub user and a token with `read:packages`, used by the server to pull |
+
+**One-time server setup** (Docker with the Compose plugin installed):
+
+```bash
+sudo mkdir -p /var/www/html/iso-agent/documents
+sudo chown -R "$USER" /var/www/html/iso-agent
+cd /var/www/html/iso-agent
+# Create .env from backend/deploy/.env.example and set GROQ_API_KEY and CORS_ORIGINS.
+```
+
+Copy the ISO library into `/var/www/html/iso-agent/documents/` (mounted read-only),
+then index it after the first deploy:
+
+```bash
+cd /var/www/html/iso-agent
+docker compose run --rm backend python -m app.ingest
+```
+
+The API listens on `127.0.0.1:8000` (`BACKEND_PORT` in `.env`); publish it through the
+server's reverse proxy. Models download into the `model_cache` volume on first use.
+
+**Rollback:** re-run an earlier successful workflow, or on the server run
+`BACKEND_TAG=<previous commit sha> docker compose up -d --no-deps backend`.
+
+## Deployment (frontend CI/CD)
+
+`.github/workflows/frontend.yml` runs lint, type-check, tests, and a production build on
+pull requests and pushes to `main` that change `frontend/**`. On `main` it then rsyncs
+`frontend/dist` to the server (files are swapped in at the end, so visitors never see a
+half-uploaded site), optionally purges Cloudflare, and smoke-tests the live site.
+
+The app calls the API on its own origin (`/api`), so Nginx serves the site and proxies
+`/api/` to the backend on `127.0.0.1:8000`. Start from
+`frontend/deploy/nginx.conf.example` (set `server_name`, add TLS, `sudo nginx -t`,
+reload). No build-time API URL and no CORS configuration are needed.
+
+It reuses `SERVER_HOST`, `SERVER_USERNAME`, and `SERVER_SSH_KEY` from the backend, plus:
+
+| Name | Kind | Purpose |
+| --- | --- | --- |
+| `SERVER_PORT` | secret | SSH port (default `22`) |
+| `SERVER_SSH_KNOWN_HOSTS` | secret | Pinned host key (`ssh-keyscan -H <host>`); otherwise scanned at deploy time |
+| `FRONTEND_DEPLOY_PATH` | variable | Default `/var/www/html/iso-agent/frontend` |
+| `FRONTEND_URL` | variable | Public URL; enables the smoke test of `/` and `/api/health` |
+| `RELOAD_NGINX` | variable | `true` to reload Nginx after deploy (needs passwordless `sudo systemctl reload nginx`) |
+| `CLOUDFLARE_API_TOKEN` / `CLOUDFLARE_ZONE_ID` | secrets | Optional cache purge |
+
+The deploy job uses the `production` environment, so you can add required reviewers to it
+under Settings → Environments.
 
 ## Troubleshooting
 
