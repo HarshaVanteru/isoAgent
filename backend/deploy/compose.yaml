@@ -1,0 +1,32 @@
+# Production stack, deployed to /var/www/html/iso-agent by .github/workflows/backend.yml.
+# The deploy job copies this file to the server on every run; edit it here, not on the server.
+name: isoagent
+
+services:
+  qdrant:
+    image: qdrant/qdrant:v1.19.2
+    volumes:
+      - qdrant_data:/qdrant/storage
+    restart: unless-stopped
+
+  backend:
+    image: ${BACKEND_IMAGE:-ghcr.io/harshavanteru/iso-agent-backend}:${BACKEND_TAG:-latest}
+    env_file: .env
+    environment:
+      QDRANT_URL: http://qdrant:6333
+      QDRANT_PATH: ""
+    depends_on:
+      - qdrant
+    ports:
+      # Localhost only: publish through the server's reverse proxy.
+      - "127.0.0.1:${BACKEND_PORT:-8000}:8000"
+    volumes:
+      - backend_data:/app/data
+      - model_cache:/app/.cache
+      - ./documents:/app/documents:ro
+    restart: unless-stopped
+
+volumes:
+  qdrant_data:
+  backend_data:
+  model_cache:
