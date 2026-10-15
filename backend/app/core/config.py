@@ -38,6 +38,7 @@ class Settings(BaseSettings):
     qdrant_timeout: int = Field(default=30, ge=1)
     qdrant_batch_size: int = Field(default=64, ge=1, le=512)
     upload_max_bytes: int = Field(default=50 * 1024 * 1024, ge=1)
+    cors_origins: str = 'http://localhost:5173,http://127.0.0.1:5173'
 
     @model_validator(mode='after')
     def paths_and_limits(self):
@@ -53,6 +54,10 @@ class Settings(BaseSettings):
     @property
     def office_executable(self):
         return self.libreoffice_path or self.soffice_path
+
+    @property
+    def cors_origin_list(self) -> list[str]:
+        return [origin.strip() for origin in self.cors_origins.split(',') if origin.strip()]
 
 
 settings = Settings()
