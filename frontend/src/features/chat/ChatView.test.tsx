@@ -59,6 +59,13 @@ describe('ChatView', () => {
     expect(value.send).toHaveBeenCalledWith('How do we handle a customer complaint?');
   });
 
+  it('keeps the welcome screen at the top instead of auto-scrolling', () => {
+    const scroll = vi.spyOn(Element.prototype, 'scrollIntoView');
+    renderChat(conversation());
+    expect(scroll).not.toHaveBeenCalled();
+    scroll.mockRestore();
+  });
+
   it('expands the cited source when a citation is clicked', async () => {
     renderChat(conversation(answered));
     const source = screen.getByRole('button', { name: /OP-07 Supplier evaluation\.docx/ });

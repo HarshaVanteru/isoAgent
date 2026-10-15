@@ -47,6 +47,7 @@ export function ChatView({
   const showWelcome = !restoring && !busy && thread.messages.length === 0 && !thread.pending_clarification;
 
   useEffect(() => {
+    if (showWelcome) return;
     const behavior = scrollBehavior();
     if (!busy && !thread.pending_clarification && thread.messages.length) {
       // Show the start of the newest answer rather than the bottom of its sources.
@@ -55,7 +56,7 @@ export function ChatView({
     } else {
       endRef.current?.scrollIntoView({ behavior, block: 'end' });
     }
-  }, [thread, busy]);
+  }, [thread, busy, showWelcome]);
 
   const placeholder = restoring
     ? 'Loading conversation…'
