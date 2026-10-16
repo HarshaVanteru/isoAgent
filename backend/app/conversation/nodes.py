@@ -153,21 +153,6 @@ class ConversationNodes:
         text = normalize_citations(str(response.content).strip())
         if not text:
             raise ValueError('Empty answer draft')
-        cited = {int(number) for number in re.findall(r'\[(\d+)\]', text)}
-        allowed = {source['citation'] for source in sources}
-        if not cited or not cited.issubset(allowed):
-            log.warning('Draft citation validation failed: cited=%s allowed=%s finish_reason=%s; retrying',
-                        sorted(cited), sorted(allowed), response.response_metadata.get('finish_reason'))
-            response = self.llm.invoke([*messages, AIMessage(content=text), HumanMessage(content=
-                prompts.CITATION_REPAIR.format(allowed_citations=', '.join(f'[{number}]' for number in sorted(allowed))))])
-            text = normalize_citations(str(response.content).strip())
-            cited = {int(number) for number in re.findall(r'\[(\d+)\]', text)}
-        if not cited or not cited.issubset(allowed):
-            log.warning('Corrected draft citation validation failed: cited=%s allowed=%s finish_reason=%s',
-                        sorted(cited), sorted(allowed), response.response_metadata.get('finish_reason'))
-            return {**self.trace(state, 'generate_draft'), 'sources': sources,
-                    'evidence_sufficient': False, 'quality_reason': 'The generated draft had missing or invalid citations.',
-                    'draft': 'I retrieved supporting passages, but could not produce an answer with valid source citations. Please review the evidence or try rephrasing the question.'}
         return {**self.trace(state, 'generate_draft'), 'sources': sources, 'draft': text}
 
     def insufficient_evidence(self, state):

@@ -68,7 +68,7 @@ when failures occur.
 ### 2. Start the backend
 
 ```powershell
-.\.venv\Scripts\python.exe -m uvicorn backend.app.main:app --host 127.0.0.1 --port 8000 --http h11 --ws none
+.\.venv\Scripts\python.exe -m uvicorn backend.app.main:app --host 127.0.0.1 --port 8001 --http h11 --ws none
 ```
 
 Use a single worker. The supported backend entry point is `backend.app.main:app`.
@@ -82,10 +82,10 @@ npm.cmd run dev
 ```
 
 - Chat: http://127.0.0.1:5173
-- API documentation: http://127.0.0.1:8000/docs
-- Health: http://127.0.0.1:8000/health
+- API documentation: http://127.0.0.1:8001/docs
+- Health: http://127.0.0.1:8001/health
 
-Vite forwards `/api` requests to port 8000. Restart the backend after changing
+Vite forwards `/api` requests to port 8001. Restart the backend after changing
 Python code or `.env`.
 
 ## Architecture

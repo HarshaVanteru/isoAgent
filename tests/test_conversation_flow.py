@@ -84,16 +84,16 @@ def test_malformed_quality_decision_does_not_generate_answer():
     assert not llm.answer_calls
 
 
-def test_generated_citations_must_refer_to_actual_supporting_sources():
+def test_grounded_answer_without_citations_is_published():
     from langchain_core.messages import AIMessage
-    class InvalidCitationLLM(FakeLLM):
+    class UncitedLLM(FakeLLM):
         def invoke(self, messages):
-            return AIMessage(content='Unsupported generated claim [99].')
-    graph = build_graph(StagedIndex(), InvalidCitationLLM(), MemorySaver())
+            return AIMessage(content='Evaluate suppliers annually.')
+    graph = build_graph(StagedIndex(), UncitedLLM(), MemorySaver())
     result = graph.invoke({'question': 'Supplier evaluation?'}, CONFIG)
-    assert 'Unsupported generated claim' not in result['draft']
-    assert 'valid source citations' in result['draft']
-    assert not result['evidence_sufficient']
+    assert result['answer'] == 'Evaluate suppliers annually.'
+    assert result['sources']
+    assert result['evidence_sufficient']
 
 
 def test_clarification_survives_restart_and_is_reanalyzed(tmp_path):

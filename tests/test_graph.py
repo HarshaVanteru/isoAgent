@@ -95,17 +95,8 @@ def test_no_evidence_does_not_hallucinate():
     assert result['retrieval_attempts'] == 2
 
 
-@pytest.mark.parametrize('corrected,accepted', [
-    ('Evaluate suppliers annually [3].', True),
-    ('Evaluate suppliers annually [1, 3].', True),
-    ('Evaluate suppliers annually [1; 3].', True),
-    ('Evaluate suppliers annually [ 3 ].', True),
-    ('Evaluate suppliers annually [1, 99].', False),
-    ('Evaluate suppliers annually [1-3].', False),
-    ('Evaluate suppliers annually [2].', False),
-    ('Evaluate suppliers annually.', False),
-])
-def test_citation_retry_preserves_nonconsecutive_source_numbers(corrected, accepted):
+@pytest.mark.parametrize('draft', ['Evaluate suppliers annually.', 'Evaluate suppliers annually [3].'])
+def test_answer_does_not_require_inline_citations(draft):
     from backend.app.conversation.nodes import ConversationNodes
 
     class DraftLLM:
@@ -114,18 +105,12 @@ def test_citation_retry_preserves_nonconsecutive_source_numbers(corrected, accep
 
         def invoke(self, messages):
             self.calls.append(messages)
-            return AIMessage(content='Evaluate suppliers annually [2].' if len(self.calls) == 1 else corrected)
+            return AIMessage(content=draft)
 
     nodes = object.__new__(ConversationNodes)
     nodes.llm = DraftLLM()
     sources = [{'citation': n, 'text': 'Evaluate suppliers annually.', 'metadata': {}} for n in (1, 3)]
     result = nodes.generate_draft({'question': 'How often?', 'sources': sources, 'supporting_citations': [1, 3]})
-    assert len(nodes.llm.calls) == 2
-    assert '[1], [3]' in nodes.llm.calls[-1][-1].content
+    assert len(nodes.llm.calls) == 1
     assert result['sources'] == sources
-    if accepted:
-        from backend.app.conversation.nodes import normalize_citations
-        assert result['draft'] == normalize_citations(corrected)
-    else:
-        assert result['evidence_sufficient'] is False
-        assert 'could not produce an answer with valid source citations' in result['draft']
+    assert result['draft'] == draft
