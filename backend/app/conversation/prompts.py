@@ -88,18 +88,6 @@ ANSWER_GENERATION = (
 )
 
 
-CITATION_REPAIR = (
-    'Rewrite the answer using only the supplied passages. The previous draft had '
-    'missing or invalid citations. Allowed citation markers are: ' +
-    '{allowed_citations}' +
-    '. Preserve these source numbers exactly, even when they are not consecutive. '
-    'Cite each factual claim with individual markers such as [1][3], rather than '
-    'grouped numbers or ranges. Remove claims unsupported by the supplied passages. '
-    'Keep the direct opening, clear explanations, and useful Markdown structure. '
-    'Return only the corrected answer.'
-)
-
-
 JSON_SCHEMA_INSTRUCTION = (
     '\nReturn a JSON object matching this schema:\n'
 )
