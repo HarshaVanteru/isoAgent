@@ -1,0 +1,15 @@
+# Only pyproject.toml and app/ are needed to build the image.
+.venv/
+data/
+.cache/
+tests/
+deploy/
+**/__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.env
+.env.*
+ISO 9001 Full Documents/
+compose.yaml
+requirements.txt

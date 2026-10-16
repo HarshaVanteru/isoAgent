@@ -11,7 +11,8 @@ from langgraph.checkpoint.sqlite import SqliteSaver
 from .core.config import settings
 from .conversation.graph import build_graph
 from .services.document_index import DocumentIndex
-from .api.routes import documents as document_routes, search as search_routes, chat as chat_routes
+from .api.routes import chat as chat_routes, documents as document_routes
+from .api.routes import search as search_routes, system as system_routes
 from .core.errors import PipelineError
 from .core.logging import configure_logging
 from .services.conversation_service import ConversationService
@@ -40,11 +41,13 @@ async def lifespan(app):
 
 
 app = FastAPI(title='ISO Knowledge Assistant', lifespan=lifespan)
-app.add_middleware(CORSMiddleware, allow_origins=['http://localhost:5173', 'http://127.0.0.1:5173'],
+app.add_middleware(CORSMiddleware, allow_origins=settings.cors_origin_list,
                    allow_methods=['GET', 'POST', 'DELETE'], allow_headers=['Content-Type'])
+app.include_router(system_routes.router)
 app.include_router(chat_routes.router)
 app.include_router(document_routes.router)
 app.include_router(search_routes.router)
+# Document and search routes are also served under /api for the frontend proxy.
 app.include_router(document_routes.router, prefix='/api')
 app.include_router(search_routes.router, prefix='/api')
 
@@ -52,17 +55,3 @@ app.include_router(search_routes.router, prefix='/api')
 @app.exception_handler(PipelineError)
 async def pipeline_error(request, exc):
     return JSONResponse(status_code=exc.status_code, content={'detail': str(exc)})
-
-
-@app.get('/api/health')
-@app.get('/health')
-def health():
-    return {'status': 'ok', 'groq_configured': bool(settings.groq_api_key),
-            'model': settings.groq_model, 'embedding_model': settings.embedding_model,
-            'index_backend': 'qdrant', 'reranker_model': settings.reranker_model}
-
-
-@app.get('/api/documents')
-def documents():
-    report = index.report()
-    return {**report, 'inventory': index.inventory()}

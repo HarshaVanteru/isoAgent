@@ -1,0 +1,168 @@
+name: Frontend CI/CD
+
+# PRs to main: lint, type-check, test and build.
+# Push to main: same checks, then rsync the built site to the server (served by Nginx,
+# which also proxies /api to the backend — see frontend/deploy/nginx.conf.example).
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'frontend/**'
+      - '.github/workflows/frontend.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'frontend/**'
+      - '.github/workflows/frontend.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: frontend-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  NODE_VERSION: '24'
+
+jobs:
+  build:
+    name: Lint, type-check, test and build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Type-check
+        run: npm run typecheck
+
+      - name: Test
+        run: npm run test
+
+      - name: Build
+        # The app calls the API on the same origin (/api), so no build-time URL is needed.
+        run: npm run build
+
+      - name: Upload build
+        if: github.event_name != 'pull_request'
+        uses: actions/upload-artifact@v7
+        with:
+          name: frontend-dist
+          path: frontend/dist
+          if-no-files-found: error
+          retention-days: 7
+
+  deploy:
+    name: Deploy to server
+    needs: build
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: production
+    permissions:
+      contents: read
+    concurrency:
+      group: frontend-deploy-production
+      cancel-in-progress: false
+    env:
+      HOST: ${{ secrets.SERVER_HOST }}
+      PORT: ${{ secrets.SERVER_PORT || '22' }}
+      SSH_USER: ${{ secrets.SERVER_USERNAME }}
+      DEPLOY_PATH: ${{ vars.FRONTEND_DEPLOY_PATH || '/var/www/html/iso-agent/frontend' }}
+      # Static files need no reload; enable only when the Nginx config itself changes
+      # (requires passwordless `sudo systemctl reload nginx` for the deploy user).
+      RELOAD_NGINX: ${{ vars.RELOAD_NGINX || 'false' }}
+      FRONTEND_URL: ${{ vars.FRONTEND_URL }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ZONE_ID: ${{ secrets.CLOUDFLARE_ZONE_ID }}
+
+    steps:
+      - name: Download build
+        uses: actions/download-artifact@v8
+        with:
+          name: frontend-dist
+          path: dist
+
+      - name: Set up SSH
+        env:
+          SSH_KEY: ${{ secrets.SERVER_SSH_KEY }}
+          KNOWN_HOSTS: ${{ secrets.SERVER_SSH_KNOWN_HOSTS }}
+        run: |
+          SSH_DIR="$RUNNER_TEMP/ssh"
+          install -m 700 -d "$SSH_DIR"
+          printf '%s\n' "$SSH_KEY" > "$SSH_DIR/deploy_key"
+          chmod 600 "$SSH_DIR/deploy_key"
+          # Prefer a pinned host key; fall back to scanning it.
+          if [ -n "$KNOWN_HOSTS" ]; then
+            printf '%s\n' "$KNOWN_HOSTS" > "$SSH_DIR/known_hosts"
+          else
+            ssh-keyscan -p "$PORT" -H "$HOST" > "$SSH_DIR/known_hosts"
+          fi
+          # Absolute paths + `ssh -F`: works on any runner, regardless of the user's home dir.
+          cat > "$SSH_DIR/config" <<EOF
+          Host deploy-target
+            HostName $HOST
+            Port $PORT
+            User $SSH_USER
+            IdentityFile $SSH_DIR/deploy_key
+            IdentitiesOnly yes
+            UserKnownHostsFile $SSH_DIR/known_hosts
+            StrictHostKeyChecking yes
+          EOF
+          echo "SSH_DIR=$SSH_DIR" >> "$GITHUB_ENV"
+
+      - name: Upload with rsync
+        run: |
+          # shellcheck disable=SC2029 # DEPLOY_PATH is meant to expand on the runner
+          ssh -F "$SSH_DIR/config" deploy-target "mkdir -p '$DEPLOY_PATH'"
+          # --delay-updates swaps files in at the end, so visitors never get a half-uploaded site.
+          rsync -az --delay-updates --delete-delay --stats \
+            -e "ssh -F $SSH_DIR/config" dist/ "deploy-target:$DEPLOY_PATH/"
+
+      - name: Reload Nginx
+        if: env.RELOAD_NGINX == 'true'
+        run: ssh -F "$SSH_DIR/config" deploy-target 'sudo -n systemctl reload nginx'
+
+      - name: Purge Cloudflare cache
+        if: env.CLOUDFLARE_API_TOKEN != '' && env.CLOUDFLARE_ZONE_ID != ''
+        run: |
+          curl --fail-with-body -sS -X POST \
+            "https://api.cloudflare.com/client/v4/zones/${CLOUDFLARE_ZONE_ID}/purge_cache" \
+            -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+            -H "Content-Type: application/json" \
+            --data '{"purge_everything":true}'
+
+      - name: Smoke test
+        if: env.FRONTEND_URL != ''
+        run: |
+          site="${FRONTEND_URL%/}"
+          for attempt in 1 2 3 4 5; do
+            # The page proves the static deploy; /api/health proves Nginx reaches the backend.
+            if curl -fsS "$site/" | grep -q '<title>ISO · Knowledge workspace</title>' \
+              && curl -fsS "$site/api/health" | grep -q '"status":"ok"'; then
+              echo "Live: $site"
+              exit 0
+            fi
+            echo "Attempt $attempt failed, retrying in 5s…"
+            sleep 5
+          done
+          echo "::error::$site did not serve the ISO workspace and its /api/health"
+          exit 1
+
+      - name: Remove SSH key
+        if: always()
+        run: rm -rf "${SSH_DIR:-$RUNNER_TEMP/ssh}"

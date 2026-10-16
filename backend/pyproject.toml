@@ -1,0 +1,40 @@
+[project]
+name = "iso-agent"
+version = "0.1.0"
+description = "Local ISO document search with Docling, BGE-M3, Qdrant, and FastAPI"
+authors = [
+    { name = "HarshaVanteru", email = "vanteruharshareddy@gmail.com" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.115,<1",
+    "uvicorn>=0.30,<1",
+    "pydantic-settings>=2,<3",
+    "python-multipart>=0.0.20,<1",
+    "langgraph",
+    "langgraph-checkpoint-sqlite",
+    "langchain-core",
+    "langchain-groq",
+    "docling==2.138.0",
+    "qdrant-client==1.19.1",
+    "sentence-transformers==5.7.0",
+    "pypdf", "python-docx", "python-pptx", "openpyxl", "xlrd", "olefile",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8,<10", "httpx>=0.28,<1"]
+
+[project.scripts]
+iso-agent = "app.ingest:main"
+
+[build-system]
+requires = ["uv_build>=0.13.0,<0.14.0"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-name = "app"
+module-root = ""
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]

@@ -19,45 +19,54 @@ and conversation context to the configured model. Search and ingestion need no G
 
 ## Setup
 
-Run from the repository root in PowerShell:
+The repository has two independent projects: `backend/` (Python) and
+`frontend/` (React). Run the backend commands from `backend/` in PowerShell:
 
 ```powershell
+cd backend
 uv venv .venv
 uv pip install --python .venv/Scripts/python.exe -r requirements.txt
 if (!(Test-Path .env)) { Copy-Item .env.example .env }
 ```
 
 Without uv, use `py -3.12 -m venv .venv` followed by
-`.\.venv\Scripts\python.exe -m pip install -r requirements.txt`.
+`.\.venv\Scripts\python.exe -m pip install -r requirements.txt`. On Linux/macOS
+use `.venv/bin/python`; on Linux without a GPU, install CPU wheels first:
+`python -m pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu`.
 
-Edit `.env`: set `GROQ_API_KEY` and `DOCUMENT_DIR`. The default library is
+Edit `backend/.env`: set `GROQ_API_KEY` and `DOCUMENT_DIR`. Relative paths in it
+resolve from `backend/`. The default library is
 `ISO 9001 Full Documents`. If needed, set
 `LIBREOFFICE_PATH=C:/Program Files/LibreOffice/program/soffice.exe`.
-Keep existing credentials when upgrading.
+Keep existing credentials when upgrading. If you used the earlier layout with
+everything at the repository root, move `.env`, `data/`, `.cache/`, and your
+document folder into `backend/`.
 
-Start Qdrant with Docker Desktop running:
+Start Qdrant with Docker Desktop running (from `backend/`):
 
 ```powershell
 docker compose up -d qdrant
 ```
 
-Alternatively set `QDRANT_PATH=data/qdrant-local` in `.env` for embedded storage
+Alternatively set `QDRANT_PATH=data/qdrant-local` in `backend/.env` for embedded storage
 without Docker. Embedded mode permits one process: stop the backend before CLI
 ingestion. In either mode, use one writer and avoid API queries during a CLI rebuild.
 
 ## Run the project
 
+Steps 1 and 2 run from `backend/`.
+
 ### 1. Index documents
 
 ```powershell
-.\.venv\Scripts\python.exe -m backend.app.ingest
+.\.venv\Scripts\python.exe -m app.ingest
 ```
 
 Unchanged successful files are skipped. Optional targeted ingestion or rebuild:
 
 ```powershell
-.\.venv\Scripts\python.exe -m backend.app.ingest --folder '2 - Procedures - SOPs'
-.\.venv\Scripts\python.exe -m backend.app.ingest --force
+.\.venv\Scripts\python.exe -m app.ingest --folder '2 - Procedures - SOPs'
+.\.venv\Scripts\python.exe -m app.ingest --force
 ```
 
 First use downloads large BGE weights and may download Docling layout/OCR models.
@@ -68,25 +77,30 @@ when failures occur.
 ### 2. Start the backend
 
 ```powershell
-.\.venv\Scripts\python.exe -m uvicorn backend.app.main:app --host 127.0.0.1 --port 8001 --http h11 --ws none
+.\.venv\Scripts\python.exe -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --http h11 --ws none
 ```
 
-Use a single worker. The supported backend entry point is `backend.app.main:app`.
+Use a single worker. The supported backend entry point is `app.main:app`.
 
 ### 3. Start the frontend in another terminal
 
 ```powershell
 cd frontend
+if (!(Test-Path .env)) { Copy-Item .env.example .env }
 npm.cmd ci
 npm.cmd run dev
 ```
 
-- Chat: http://127.0.0.1:5173
-- API documentation: http://127.0.0.1:8001/docs
-- Health: http://127.0.0.1:8001/health
+`frontend/.env` sets `VITE_API_PROXY_TARGET` (backend URL, default
+`http://127.0.0.1:8000`) and `VITE_DEV_PORT` (default `5173`). If you change the
+port, add the new origin to `CORS_ORIGINS` in `backend/.env`.
 
-Vite forwards `/api` requests to port 8001. Restart the backend after changing
-Python code or `.env`.
+- Chat: http://127.0.0.1:5173
+- API documentation: http://127.0.0.1:8000/docs
+- Health: http://127.0.0.1:8000/health
+
+Vite forwards `/api` requests to the backend. Restart the backend after changing
+Python code or `backend/.env`.
 
 ## Architecture
 
@@ -130,12 +144,14 @@ is designed for local use with one backend worker.
 ## Project structure
 
 ```text
-backend/
+README.md
+.github/workflows/          Backend and frontend CI/CD pipelines
+backend/                    Python project (run backend commands here)
   app/
     main.py                 FastAPI assembly and resource lifecycle
     api/
-      dependencies.py       HTTP service dependencies
-      routes/               Chat, document, and search endpoints
+      dependencies.py       Typed HTTP service dependencies
+      routes/               System, chat, document, and search endpoints
     core/                   Settings, logging, pipeline errors
     models/                 API request and response schemas
     services/               Conversation, ingestion, search, index facade, wiring
@@ -145,17 +161,29 @@ backend/
     retrieval/              Vector retrieval and BGE reranking
     vectorstore/            Qdrant persistence adapter
     utils/                  Shared file, text, and cleanup helpers
-    ingest.py               Ingestion CLI (python -m backend.app.ingest)
-frontend/src/               React chat UI and styles
-tests/                     API, graph, ingestion, retrieval tests
-data/                      Generated artifacts and persisted state
-pyproject.toml              Python dependency definitions and package metadata
-requirements.txt            Generated dependencies and editable install
-compose.yaml                Local Qdrant service
-.env.example                Configuration template
+    ingest.py               Ingestion CLI (python -m app.ingest)
+  tests/                    API, graph, ingestion, retrieval tests
+  data/                     Generated artifacts and persisted state
+  pyproject.toml            Python dependency definitions and package metadata
+  requirements.txt          Generated dependencies and editable install
+  compose.yaml              Local Qdrant service
+  .env.example              Backend configuration template
+  Dockerfile                Production image (CPU PyTorch, LibreOffice, non-root)
+  deploy/                   Server compose stack and server .env template
+frontend/                   React / TypeScript / Vite project
+  src/
+    app/                    App root, layout shell, view switching
+    api/                    Typed API client and response types
+    components/             Shared UI: sidebar, header, markdown, notices
+    features/chat/          Conversation hook, chat view, composer, sources
+    features/library/       Library hook, file list, filters
+    hooks/ lib/             Health hook; citation, storage, and small helpers
+    styles/                 Design tokens (light/dark) and base styles
+  .env.example              Frontend configuration template
+  deploy/                   Nginx site example (static files + /api proxy)
 ```
 
-All backend implementation code lives in `backend/app/`. Qdrant is the single
+All backend code lives in `backend/`; all frontend code lives in `frontend/`. Qdrant is the single
 supported vector store; compatibility wrappers and the alternate Chroma pipeline
 have been removed. `pyproject.toml` defines dependencies; `requirements.txt` lists the application and test dependencies generated from
 that metadata, plus the editable project install.
@@ -180,8 +208,9 @@ that metadata, plus the editable project install.
 | `MULTI_QUERY_LIMIT` | `3`, including the original query |
 | `RETRIEVAL_MAX_RETRIES` | `1` |
 | `GRAPH_STRUCTURED_OUTPUT_METHOD` | `json_schema` |
+| `CORS_ORIGINS` | `http://localhost:5173,http://127.0.0.1:5173` |
 
-See `.env.example` for all options. Use a new Qdrant collection when changing
+See `backend/.env.example` for all options. Use a new Qdrant collection when changing
 incompatible embedding or chunk settings. Docling models have separate caching needs.
 
 ## API
@@ -219,8 +248,12 @@ compatibility; new answers do not wait for approval.
 ## Verification
 
 ```powershell
+cd backend
 .\.venv\Scripts\python.exe -m pytest -q
-cd frontend
+cd ..\frontend
+npm.cmd run typecheck
+npm.cmd run lint
+npm.cmd run test
 npm.cmd run build
 ```
 
@@ -228,7 +261,7 @@ Regular tests use deterministic embedding/LLM substitutes with real Docling and
 embedded Qdrant. Citation checks validate source numbers, not whether every claim
 follows from its cited passage. Live answer quality needs separate evaluation.
 
-Optional checks from the repository root:
+Optional checks from `backend/`:
 
 ```powershell
 # Downloads/loads actual BGE model weights.
@@ -242,9 +275,79 @@ $env:RUN_GROQ_TESTS = '1'
 Remove-Item Env:RUN_GROQ_TESTS
 ```
 
+## Deployment (backend CI/CD)
+
+`.github/workflows/backend.yml` runs on every push to `main` that changes `backend/**`
+(or manually via **Run workflow**):
+
+1. **test** — installs CPU PyTorch and `backend/requirements.txt`, runs `pytest`.
+2. **build** — builds `backend/Dockerfile` natively on amd64 and arm64 runners and pushes
+   each by digest to `ghcr.io/harshavanteru/iso-agent-backend`.
+3. **merge** — publishes one multi-arch image tagged `latest` and the commit SHA.
+4. **deploy** — copies `backend/deploy/compose.yaml` to the server, pulls the SHA-tagged
+   image, restarts the `backend` service, and fails the run (printing logs) unless the
+   container reports healthy within three minutes.
+
+**Repository secrets** (Settings → Secrets and variables → Actions):
+
+| Secret | Value |
+| --- | --- |
+| `SERVER_HOST` / `SERVER_USERNAME` | SSH host and user of the deploy server |
+| `SERVER_SSH_KEY` | Private key for that user |
+| `GHCR_USERNAME` / `GHCR_PAT` | GitHub user and a token with `read:packages`, used by the server to pull |
+
+**One-time server setup** (Docker with the Compose plugin installed):
+
+```bash
+sudo mkdir -p /var/www/html/iso-agent/documents
+sudo chown -R "$USER" /var/www/html/iso-agent
+cd /var/www/html/iso-agent
+# Create .env from backend/deploy/.env.example and set GROQ_API_KEY and CORS_ORIGINS.
+```
+
+Copy the ISO library into `/var/www/html/iso-agent/documents/` (mounted read-only),
+then index it after the first deploy:
+
+```bash
+cd /var/www/html/iso-agent
+docker compose run --rm backend python -m app.ingest
+```
+
+The API listens on `127.0.0.1:8000` (`BACKEND_PORT` in `.env`); publish it through the
+server's reverse proxy. Models download into the `model_cache` volume on first use.
+
+**Rollback:** re-run an earlier successful workflow, or on the server run
+`BACKEND_TAG=<previous commit sha> docker compose up -d --no-deps backend`.
+
+## Deployment (frontend CI/CD)
+
+`.github/workflows/frontend.yml` runs lint, type-check, tests, and a production build on
+pull requests and pushes to `main` that change `frontend/**`. On `main` it then rsyncs
+`frontend/dist` to the server (files are swapped in at the end, so visitors never see a
+half-uploaded site), optionally purges Cloudflare, and smoke-tests the live site.
+
+The app calls the API on its own origin (`/api`), so Nginx serves the site and proxies
+`/api/` to the backend on `127.0.0.1:8000`. Start from
+`frontend/deploy/nginx.conf.example` (set `server_name`, add TLS, `sudo nginx -t`,
+reload). No build-time API URL and no CORS configuration are needed.
+
+It reuses `SERVER_HOST`, `SERVER_USERNAME`, and `SERVER_SSH_KEY` from the backend, plus:
+
+| Name | Kind | Purpose |
+| --- | --- | --- |
+| `SERVER_PORT` | secret | SSH port (default `22`) |
+| `SERVER_SSH_KNOWN_HOSTS` | secret | Pinned host key (`ssh-keyscan -H <host>`); otherwise scanned at deploy time |
+| `FRONTEND_DEPLOY_PATH` | variable | Default `/var/www/html/iso-agent/frontend` |
+| `FRONTEND_URL` | variable | Public URL; enables the smoke test of `/` and `/api/health` |
+| `RELOAD_NGINX` | variable | `true` to reload Nginx after deploy (needs passwordless `sudo systemctl reload nginx`) |
+| `CLOUDFLARE_API_TOKEN` / `CLOUDFLARE_ZONE_ID` | secrets | Optional cache purge |
+
+The deploy job uses the `production` environment, so you can add required reviewers to it
+under Settings → Environments.
+
 ## Troubleshooting
 
-- Chat unavailable: set `GROQ_API_KEY` in the root `.env` and restart.
+- Chat unavailable: set `GROQ_API_KEY` in `backend/.env` and restart.
 - No indexed documents: run ingestion and inspect per-file errors.
 - Qdrant connection failure: start Qdrant or configure embedded storage.
 - Embedded storage locked: stop the other backend/ingestion process.
@@ -285,7 +388,7 @@ git ls-files --others --exclude-standard
 Supported formats: PDF, DOCX, DOC, XLSX, XLS, PPTX, TXT, CSV, Markdown, VSD,
 and VSDX. Legacy Office files and Visio diagrams use LibreOffice conversion.
 Original files are preserved. On Windows the converter prefers `soffice.com`
-when available and uses short temporary profile paths under `data/.office-work/`.
+when available and uses short temporary profile paths under `backend/data/.office-work/`.
 
 HybridChunker uses the embedding tokenizer with a default 500-token budget.
 Small forms remain whole where possible; presentations retain slide locations;
@@ -297,11 +400,11 @@ Review representative extracted content before relying on answers.
 
 | Location | Contents |
 | --- | --- |
-| `data/raw/` | API uploads |
-| `data/processed/<document_id>/` | Converted/parsed artifacts and chunk previews |
-| `data/qdrant-ingestion.json` | Per-file ingestion status and source tracking |
-| `data/conversations-legacy.sqlite` | Conversation checkpoints; filename retained for existing history |
-| `.cache/huggingface/hub/` | Default BGE model cache |
+| `backend/data/raw/` | API uploads |
+| `backend/data/processed/<document_id>/` | Converted/parsed artifacts and chunk previews |
+| `backend/data/qdrant-ingestion.json` | Per-file ingestion status and source tracking |
+| `backend/data/conversations-legacy.sqlite` | Conversation checkpoints; filename retained for existing history |
+| `backend/.cache/huggingface/hub/` | Default BGE model cache |
 
 Identical document bytes share a SHA-256 identity. Changed files replace prior
 vectors; removed sources are reconciled during successful folder ingestion.

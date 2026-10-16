@@ -1,0 +1,28 @@
+.sources {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--color-text-muted);
+}
+
+.count {
+  padding: 1px 7px;
+  font-size: var(--text-2xs);
+  background: var(--color-surface-muted);
+  border-radius: var(--radius-pill);
+}
+
+.list {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}

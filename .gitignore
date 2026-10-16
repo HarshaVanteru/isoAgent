@@ -9,15 +9,15 @@
 *.key
 *.p12
 *.pfx
-
+docs
 # Python environments, bytecode, and packaging output
 .venv/
 venv/
 __pycache__/
 *.py[cod]
 *.egg-info/
-/build/
-/dist/
+/backend/build/
+/backend/dist/
 
 # Test, lint, and model caches
 .pytest_cache/
@@ -30,6 +30,9 @@ htmlcov/
 coverage.xml
 
 # Private document library and generated application data
+/backend/ISO 9001 Full Documents/
+/backend/data/
+# Pre-restructure locations; keep ignored until existing clones move them into backend/.
 /ISO 9001 Full Documents/
 /data/
 *.sqlite
