@@ -77,7 +77,7 @@ when failures occur.
 ### 2. Start the backend
 
 ```powershell
-.\.venv\Scripts\python.exe -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --http h11 --ws none
+.\.venv\Scripts\python.exe -m uvicorn app.main:app --host 127.0.0.1 --port 8009 --http h11 --ws none
 ```
 
 Use a single worker. The supported backend entry point is `app.main:app`.
@@ -92,12 +92,12 @@ npm.cmd run dev
 ```
 
 `frontend/.env` sets `VITE_API_PROXY_TARGET` (backend URL, default
-`http://127.0.0.1:8000`) and `VITE_DEV_PORT` (default `5173`). If you change the
+`http://127.0.0.1:8009`) and `VITE_DEV_PORT` (default `5173`). If you change the
 port, add the new origin to `CORS_ORIGINS` in `backend/.env`.
 
 - Chat: http://127.0.0.1:5173
-- API documentation: http://127.0.0.1:8000/docs
-- Health: http://127.0.0.1:8000/health
+- API documentation: http://127.0.0.1:8009/docs
+- Health: http://127.0.0.1:8009/health
 
 Vite forwards `/api` requests to the backend. Restart the backend after changing
 Python code or `backend/.env`.
@@ -313,7 +313,7 @@ cd /var/www/html/iso-agent
 docker compose run --rm backend python -m app.ingest
 ```
 
-The API listens on `127.0.0.1:8000` (`BACKEND_PORT` in `.env`); publish it through the
+The API listens on `127.0.0.1:8009` (`BACKEND_PORT` in `.env`); publish it through the
 server's reverse proxy. Models download into the `model_cache` volume on first use.
 
 **Rollback:** re-run an earlier successful workflow, or on the server run
@@ -327,7 +327,7 @@ pull requests and pushes to `main` that change `frontend/**`. On `main` it then 
 half-uploaded site), optionally purges Cloudflare, and smoke-tests the live site.
 
 The app calls the API on its own origin (`/api`), so Nginx serves the site and proxies
-`/api/` to the backend on `127.0.0.1:8000`. Start from
+`/api/` to the backend on `127.0.0.1:8009`. Start from
 `frontend/deploy/nginx.conf.example` (set `server_name`, add TLS, `sudo nginx -t`,
 reload). No build-time API URL and no CORS configuration are needed.
 
@@ -437,3 +437,25 @@ include `workflow_steps`, `search_queries`, `retrieval_attempts`, and
 `evidence_sufficient` for diagnosis. After a failed or incompatible checkpoint,
 start a new conversation. Model routing and evidence judgments can make mistakes;
 evaluate representative questions against their expected source documents.
+
+
+## LangSmith tracing
+
+Set these in `backend/.env` (or the deployment `.env`) and restart the backend:
+
+```dotenv
+LANGSMITH_TRACING=true
+LANGSMITH_API_KEY=your-langsmith-api-key
+LANGSMITH_PROJECT=iso-agent
+LANGSMITH_ENDPOINT=https://api.smith.langchain.com
+# Only needed for keys associated with multiple workspaces:
+LANGSMITH_WORKSPACE_ID=
+```
+
+Open the `iso-agent` project in LangSmith after sending a new question. Native
+LangGraph instrumentation creates one parent run per graph invocation with nested
+node and Groq runs. The `thread_id` metadata groups follow-ups. No additional
+`traceable` wrapper or explicit tracer callback is installed, avoiding duplicate
+instrumentation. Stream progress events and health polling are not separately traced.
+Retries are separate attempts within the trace. Traces include questions, retrieved
+passages, and generated answers. Leave `LANGSMITH_TRACING=false` to disable uploads.

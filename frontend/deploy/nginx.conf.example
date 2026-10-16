@@ -1,6 +1,6 @@
 # Nginx site for the ISO Knowledge Assistant.
 # Serves the built frontend (rsynced by .github/workflows/frontend.yml) and proxies /api
-# to the backend container (backend/deploy/compose.yaml publishes it on 127.0.0.1:8000).
+# to the backend container (backend/deploy/compose.yaml publishes it on 127.0.0.1:8009).
 # Install: copy to /etc/nginx/sites-available/iso-agent, set server_name, enable, add TLS
 # (e.g. certbot --nginx), then `sudo nginx -t && sudo systemctl reload nginx`.
 
@@ -15,7 +15,7 @@ server {
     client_max_body_size 50m;
 
     location /api/ {
-        proxy_pass http://127.0.0.1:8000;
+        proxy_pass http://127.0.0.1:8009;
         proxy_http_version 1.1;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;

@@ -23,6 +23,8 @@ def test_api_answers_and_followups_without_approval(monkeypatch):
         assert not result['pending_review'] and not result['pending_clarification']
         assert result['answer'] == 'Evaluate suppliers annually [1].'
         assert len(result['messages']) == 2
+        assert result['messages'][-1]['response_time_seconds'] >= 0
+        assert client.get(base).json()['messages'][-1]['response_time_seconds'] == result['messages'][-1]['response_time_seconds']
         assert result['category'] == 'Purchasing'
         assert client.get(base).json()['category'] == 'Purchasing'
         response = client.post(base + '/messages', json={'question': 'How often?'})
@@ -106,3 +108,44 @@ def test_clarification_api_resume_and_conflicts(monkeypatch):
         assert len(result['messages']) == 4
         assert not result['messages'][-1]['reviewed']
         assert result['answer'] == 'Evaluate suppliers annually [1].'
+
+
+def test_progress_stream_reports_real_stages_and_final_answer(monkeypatch):
+    import json
+    from app import main
+    monkeypatch.setattr(main.settings, 'groq_api_key', 'test-key')
+    with TestClient(app) as client:
+        app.state.graph = build_graph(FakeIndex(), FakeLLM(), MemorySaver())
+        base = f'/api/threads/{uuid4()}'
+        response = client.post(base + '/messages/stream', json={'question': 'Suppliers?'})
+        assert response.status_code == 200
+        assert response.headers['content-type'].startswith('text/event-stream')
+        frames = [frame for frame in response.text.split('\n\n') if frame.startswith('event:')]
+        stages = [json.loads(frame.split('data: ', 1)[1])['stage'] for frame in frames if frame.startswith('event: progress')]
+        assert stages == ['conversation_router', 'query_analysis', 'query_expansion',
+                          'multi_query_generation', 'retrieval', 'reranking',
+                          'retrieval_quality_check', 'generate_draft', 'finalize_answer']
+        assert frames[-1].startswith('event: result')
+        assert json.loads(frames[-1].split('data: ', 1)[1])['answer'] == 'Evaluate suppliers annually [1].'
+        assert client.get(base).json()['answer'] == 'Evaluate suppliers annually [1].'
+
+
+def test_progress_stream_returns_errors_without_a_result(monkeypatch):
+    from app import main
+    monkeypatch.setattr(main.settings, 'groq_api_key', 'test-key')
+    with TestClient(app) as client:
+        app.state.graph = build_graph(FakeIndex(), FakeLLM(), MemorySaver())
+        response = client.post(f'/api/threads/{uuid4()}/clarify/stream', json={'answer': 'Supplier control'})
+        assert 'event: error' in response.text
+        assert 'event: result' not in response.text
+
+
+def test_delete_chat_removes_persisted_conversation(monkeypatch):
+    from app import main
+    monkeypatch.setattr(main.settings, 'groq_api_key', 'test-key')
+    with TestClient(app) as client:
+        app.state.graph = build_graph(FakeIndex(), FakeLLM(), MemorySaver())
+        base = f'/api/threads/{uuid4()}'
+        assert client.post(base + '/messages', json={'question': 'hello'}).status_code == 200
+        assert client.delete(base).json() == {'deleted': True}
+        assert client.get(base).status_code == 404

@@ -17,6 +17,7 @@ export function MessageList({ messages, citedIndex, citations, onCitation }: Mes
         key={index}
         role={message.role}
         content={message.content}
+        responseTimeSeconds={message.response_time_seconds}
         citations={cited ? citations : undefined}
         onCitation={cited ? onCitation : undefined}
       />

@@ -5,7 +5,7 @@ import { defineConfig, loadEnv } from 'vite';
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), 'VITE_');
   const port = Number(env.VITE_DEV_PORT || 5173);
-  const proxy = { '/api': env.VITE_API_PROXY_TARGET || 'http://127.0.0.1:8000' };
+  const proxy = { '/api': env.VITE_API_PROXY_TARGET || 'http://127.0.0.1:8009' };
   return {
     plugins: [react()],
     // strictPort: a silently shifted port would no longer match the backend CORS_ORIGINS.

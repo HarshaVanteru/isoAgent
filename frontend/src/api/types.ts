@@ -10,6 +10,7 @@ export interface Source {
 
 export interface ThreadMessage {
   role: 'user' | 'assistant';
+  response_time_seconds?: number | null;
   content: string;
 }
 

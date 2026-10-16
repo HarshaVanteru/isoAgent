@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
-import { Header } from '../components/Header';
+import { Menu } from 'lucide-react';
 import styles from './AppShell.module.css';
 
 interface AppShellProps {
@@ -43,13 +43,12 @@ export function AppShell({ title, sidebar, children }: AppShellProps) {
       </aside>
       {drawerOpen && <div className={styles.backdrop} onClick={closeDrawer} aria-hidden="true" />}
       <div className={styles.main}>
-        <Header
-          title={title}
-          menuOpen={drawerOpen}
-          onMenuToggle={() => setDrawerOpen((open) => !open)}
-          menuButtonRef={menuButton}
-        />
-        <main id="main-content" className={styles.content} tabIndex={-1}>
+        <button type="button" ref={menuButton} className={styles.menu}
+          aria-label="Toggle navigation" aria-expanded={drawerOpen} aria-controls="app-sidebar"
+          onClick={() => setDrawerOpen((open) => !open)}>
+          <Menu size={20} aria-hidden="true" />
+        </button>
+        <main id="main-content" className={styles.content} tabIndex={-1} aria-label={title}>
           {children}
         </main>
       </div>

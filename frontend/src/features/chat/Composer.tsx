@@ -9,6 +9,7 @@ interface ComposerProps {
   onChange: (value: string) => void;
   onSubmit: () => void;
   disabled: boolean;
+  sendDisabled?: boolean;
   placeholder: string;
   categories: string[];
   category: string;
@@ -21,6 +22,7 @@ export function Composer({
   onChange,
   onSubmit,
   disabled,
+  sendDisabled = false,
   placeholder,
   categories,
   category,
@@ -29,7 +31,7 @@ export function Composer({
 }: ComposerProps) {
   const textarea = useRef<HTMLTextAreaElement>(null);
   const wasDisabled = useRef(disabled);
-  const canSend = !disabled && value.trim().length > 0;
+  const canSend = !disabled && !sendDisabled && value.trim().length > 0;
 
   useLayoutEffect(() => {
     const element = textarea.current;

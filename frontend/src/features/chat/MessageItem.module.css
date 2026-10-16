@@ -40,3 +40,10 @@
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
+
+.responseTime {
+  margin-top: var(--space-3);
+  font-size: var(--text-xs);
+  color: var(--color-text-subtle);
+  font-variant-numeric: tabular-nums;
+}

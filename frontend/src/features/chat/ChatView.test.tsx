@@ -8,12 +8,16 @@ import { emptyThread, type Conversation } from './useConversation';
 function conversation(thread: Partial<Thread> = {}, overrides: Partial<Conversation> = {}): Conversation {
   return {
     thread: { ...emptyThread(), ...thread },
+    history: [],
+    deleteThread: vi.fn(async () => {}),
+    openThread: vi.fn(async () => {}),
     category: '',
     setCategory: vi.fn(),
     draft: '',
     setDraft: vi.fn(),
     restoring: false,
     busy: false,
+    stage: '',
     pendingMessage: '',
     error: null,
     dismissError: vi.fn(),

@@ -1,7 +1,7 @@
 import { ChevronRight, FileText } from 'lucide-react';
 import { useEffect, useMemo, useRef } from 'react';
 import { Skeleton } from '../../components/Skeleton';
-import { Spinner } from '../../components/Spinner';
+import { ResponseProgress } from './ResponseProgress';
 import { scrollBehavior } from '../../lib/motion';
 import type { LibraryStatus } from '../library/useLibrary';
 import { ClarificationCard } from './ClarificationCard';
@@ -93,11 +93,7 @@ export function ChatView({
             )}
             {pendingMessage && <MessageItem role="user" content={pendingMessage} />}
             {restoring && <Skeleton lines={3} label="Loading conversation" />}
-            {busy && (
-              <p className={styles.status} role="status">
-                <Spinner size={17} /> Working with your documents…
-              </p>
-            )}
+            {busy && <ResponseProgress key={thread.thread_id} stage={conversation.stage} startedAt={conversation.startedAt} />}
           </div>
         )}
         <div ref={endRef} />
@@ -119,7 +115,8 @@ export function ChatView({
           value={conversation.draft}
           onChange={conversation.setDraft}
           onSubmit={() => void conversation.send()}
-          disabled={busy || restoring}
+          disabled={restoring}
+          sendDisabled={busy}
           placeholder={placeholder}
           categories={categories}
           category={conversation.category}

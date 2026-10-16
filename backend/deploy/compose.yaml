@@ -19,7 +19,7 @@ services:
       - qdrant
     ports:
       # Localhost only: publish through the server's reverse proxy.
-      - "127.0.0.1:${BACKEND_PORT:-8000}:8000"
+      - "127.0.0.1:${BACKEND_PORT:-8009}:8009"
     volumes:
       - backend_data:/app/data
       - model_cache:/app/.cache

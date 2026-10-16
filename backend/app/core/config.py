@@ -8,6 +8,11 @@ BACKEND_DIR = Path(__file__).resolve().parents[2]
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=BACKEND_DIR / '.env', extra='ignore')
+    langsmith_tracing: bool = False
+    langsmith_api_key: str = ''
+    langsmith_project: str = 'iso-agent'
+    langsmith_endpoint: str = 'https://api.smith.langchain.com'
+    langsmith_workspace_id: str = ''
     groq_api_key: str = ''
     groq_model: str = 'openai/gpt-oss-120b'
     document_dir: Path = BACKEND_DIR / 'ISO 9001 Full Documents'

@@ -15,6 +15,7 @@ from .api.routes import chat as chat_routes, documents as document_routes
 from .api.routes import search as search_routes, system as system_routes
 from .core.errors import PipelineError
 from .core.logging import configure_logging
+from .core.tracing import configure_tracing
 from .services.conversation_service import ConversationService
 
 index = DocumentIndex(settings)
@@ -23,6 +24,7 @@ index = DocumentIndex(settings)
 @asynccontextmanager
 async def lifespan(app):
     configure_logging()
+    configure_tracing(settings)
     app.state.services = index.services
     settings.data_dir.mkdir(parents=True, exist_ok=True)
     # Keep modern and legacy checkpoint formats separate.

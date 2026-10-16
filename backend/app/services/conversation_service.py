@@ -1,14 +1,15 @@
 """Conversation execution, checkpoint snapshots, and clarification handling."""
 import logging
 import threading
+from time import perf_counter
 from contextlib import contextmanager
 from uuid import UUID
 from fastapi import HTTPException
 from ..core.errors import PipelineError
 from ..models.requests import Question, ClarificationReply, Review
 
-def config(thread_id: UUID):
-    return {'configurable': {'thread_id': str(thread_id)}}
+def config(thread_id: UUID, on_progress=None):
+    return {'metadata': {'thread_id': str(thread_id)}, 'configurable': {'thread_id': str(thread_id), **({'on_progress': on_progress} if on_progress else {})}}
 
 
 @contextmanager
@@ -51,7 +52,8 @@ class ConversationService:
                 'workflow_steps': values.get('steps', []),
                 'search_queries': values.get('queries', []),
                 'messages': [{'role': 'user' if m.type == 'human' else 'assistant', 'content': m.content,
-                              'reviewed': m.additional_kwargs.get('reviewed', True) if m.type == 'ai' else False}
+                              'reviewed': m.additional_kwargs.get('reviewed', True) if m.type == 'ai' else False,
+                              'response_time_seconds': m.additional_kwargs.get('response_time_seconds') if m.type == 'ai' else None}
                              for m in values.get('messages', [])],
                 'question': values.get('question', ''), 'draft': values.get('draft', ''),
                 'category': values.get('category', ''),
@@ -62,7 +64,13 @@ class ConversationService:
         with self.lock:
             return self.snapshot(thread_id)
 
-    def ask(self, thread_id: UUID, body: Question):
+    def delete_thread(self, thread_id: UUID):
+        with self.lock:
+            self.app.state.graph.checkpointer.delete_thread(str(thread_id))
+        return {'deleted': True}
+
+    def ask(self, thread_id: UUID, body: Question, on_progress=None):
+        started = perf_counter()
         self.require_chat_model()
         with self.lock:
             state = self.app.state.graph.get_state(config(thread_id))
@@ -73,18 +81,20 @@ class ConversationService:
                 raise HTTPException(409, 'Reply to the clarification before asking another question; start a new conversation after a failed request.')
             with graph_operation(thread_id):
                 self.app.state.graph.invoke({'question': body.question, 'category': body.category,
-                                        'review_action': '', 'review_answer': ''}, config(thread_id))
+                                        'request_started_at': started,
+                                        'review_action': '', 'review_answer': ''}, config(thread_id, on_progress))
             return self.snapshot(thread_id)
 
-    def clarify(self, thread_id: UUID, body: ClarificationReply):
+    def clarify(self, thread_id: UUID, body: ClarificationReply, on_progress=None):
+        started = perf_counter()
         self.require_chat_model()
         with self.lock:
             current = self.snapshot(thread_id)
             if not current['pending_clarification']:
                 raise HTTPException(409, 'No clarification reply is expected')
             with graph_operation(thread_id):
-                self.app.state.graph.update_state(config(thread_id), {'clarification_reply': body.answer})
-                self.app.state.graph.invoke(None, config(thread_id))
+                self.app.state.graph.update_state(config(thread_id), {'clarification_reply': body.answer, 'request_started_at': started})
+                self.app.state.graph.invoke(None, config(thread_id, on_progress))
             return self.snapshot(thread_id)
 
     def review(self, thread_id: UUID, body: Review):

@@ -25,6 +25,14 @@ export default function App() {
       title={TITLES[view]}
       sidebar={(closeDrawer) => (
         <Sidebar
+          history={conversation.history}
+          onDeleteThread={(id) => void conversation.deleteThread(id)}
+          activeThreadId={conversation.thread.thread_id}
+          onOpenThread={(id) => {
+            void conversation.openThread(id);
+            setView('chat');
+            closeDrawer();
+          }}
           view={view}
           onNavigate={(next) => {
             setView(next);
@@ -35,11 +43,8 @@ export default function App() {
             setView('chat');
             closeDrawer();
           }}
-          newChatDisabled={conversation.busy || conversation.restoring}
+          newChatDisabled={false}
           fileCount={library.status === 'ready' ? library.files.length : null}
-          indexedCount={library.indexedCount}
-          chunkCount={library.chunkCount}
-          online={library.online}
         />
       )}
     >

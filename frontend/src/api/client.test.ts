@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { ApiError, BACKEND_ERROR_MESSAGE, UNREACHABLE_MESSAGE, isAbortError, request } from './client';
+import { ApiError, BACKEND_ERROR_MESSAGE, UNREACHABLE_MESSAGE, isAbortError, request, streamRequest } from './client';
 
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
@@ -65,5 +65,34 @@ describe('request', () => {
     const error = await request('/health').catch((caught: unknown) => caught);
     expect(error).toBe(abort);
     expect(isAbortError(error)).toBe(true);
+  });
+});
+
+
+describe('streamRequest', () => {
+  function stream(chunks: string[]) {
+    const encoder = new TextEncoder();
+    return new Response(new ReadableStream({ start(controller) {
+      chunks.forEach((chunk) => controller.enqueue(encoder.encode(chunk)));
+      controller.close();
+    } }));
+  }
+
+  it('handles split progress frames and returns the final result', async () => {
+    mockFetch(async () => stream([
+      ': connected\n\nevent: pro',
+      'gress\ndata: {"stage":"retrieval"}\n',
+      '\nevent: result\ndata: {"answer":"Done"}\n\n',
+    ]));
+    const notify = vi.fn();
+    await expect(streamRequest('/threads/t/messages', { question: 'Q' }, notify)).resolves.toEqual({ answer: 'Done' });
+    expect(notify).toHaveBeenCalledWith('retrieval');
+  });
+
+  it('rejects server errors and incomplete responses', async () => {
+    mockFetch(async () => stream(['event: error\ndata: {"detail":"No evidence"}\n\n']));
+    await expect(streamRequest('/threads/t/messages', {}, vi.fn())).rejects.toThrow('No evidence');
+    mockFetch(async () => stream([': keepalive\n\n']));
+    await expect(streamRequest('/threads/t/messages', {}, vi.fn())).rejects.toThrow('connection ended');
   });
 });

@@ -1,4 +1,5 @@
 import logging
+from time import perf_counter
 import re
 import json
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
@@ -48,6 +49,11 @@ class ConversationNodes:
         return response if isinstance(response, schema) else schema.model_validate(response)
 
     @staticmethod
+    def response_timing(state):
+        started = state.get('request_started_at')
+        return {'response_time_seconds': round(max(0, perf_counter() - started), 3)} if started is not None else {}
+
+    @staticmethod
     def trace(state, name):
         log.info('Conversation stage: %s', name)
         return {'steps': [*state.get('steps', []), name]}
@@ -73,7 +79,7 @@ class ConversationNodes:
         if not text:
             raise ValueError('Empty conversational response')
         return {**self.trace(state, 'direct_response'), 'answer': text, 'decision': 'direct',
-                'messages': [*current_turn(state), AIMessage(content=text, additional_kwargs={'reviewed': False})]}
+                'messages': [*current_turn(state), AIMessage(content=text, additional_kwargs={'reviewed': False, **self.response_timing(state)})]}
 
     def query_analysis(self, state):
         result = self.decide(QueryAnalysis,
@@ -171,4 +177,4 @@ class ConversationNodes:
     def finalize_answer(self, state):
         answer = state['draft']
         return {**self.trace(state, 'finalize_answer'), 'answer': answer, 'decision': 'automatic',
-                'messages': [*current_turn(state), AIMessage(content=answer, additional_kwargs={'reviewed': False})]}
+                'messages': [*current_turn(state), AIMessage(content=answer, additional_kwargs={'reviewed': False, **self.response_timing(state)})]}

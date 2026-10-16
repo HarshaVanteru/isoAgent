@@ -1,4 +1,4 @@
-import { ChevronRight, Menu, ShieldCheck } from 'lucide-react';
+import { Menu, ShieldCheck } from 'lucide-react';
 import type { Ref } from 'react';
 import styles from './Header.module.css';
 
@@ -23,13 +23,7 @@ export function Header({ title, menuOpen, onMenuToggle, menuButtonRef }: HeaderP
       >
         <Menu size={20} aria-hidden="true" />
       </button>
-      <div className={styles.crumbs}>
-        <span className={styles.crumb}>Workspace</span>
-        <ChevronRight size={13} className={styles.crumb} aria-hidden="true" />
-        <span className={styles.title} aria-current="page">
-          {title}
-        </span>
-      </div>
+      <span className="visually-hidden">{title}</span>
       <span className={styles.badge}>
         <ShieldCheck size={14} aria-hidden="true" /> Answers with sources
       </span>

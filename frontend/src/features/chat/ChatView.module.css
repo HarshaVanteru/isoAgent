@@ -77,3 +77,7 @@
     padding: var(--space-2) var(--space-3) var(--space-3);
   }
 }
+
+.progress { padding: var(--space-4); border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-surface); }
+.elapsed { margin-top: var(--space-2); font-size: var(--text-xs); color: var(--color-text-subtle); font-variant-numeric: tabular-nums; }
+.waitHint { margin-top: var(--space-3); font-size: var(--text-xs); color: var(--color-text-muted); }

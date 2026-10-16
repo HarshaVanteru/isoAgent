@@ -7,11 +7,12 @@ import styles from './MessageItem.module.css';
 interface MessageItemProps {
   role: ThreadMessage['role'];
   content: string;
+  responseTimeSeconds?: number | null;
   citations?: ReadonlySet<number>;
   onCitation?: (citation: number) => void;
 }
 
-export function MessageItem({ role, content, citations, onCitation }: MessageItemProps) {
+export function MessageItem({ role, content, citations, onCitation, responseTimeSeconds }: MessageItemProps) {
   const fromUser = role === 'user';
   return (
     <article className={cx(styles.message, fromUser && styles.user)}>
@@ -26,6 +27,9 @@ export function MessageItem({ role, content, citations, onCitation }: MessageIte
           <Markdown citations={citations} onCitation={onCitation}>
             {content}
           </Markdown>
+        )}
+        {!fromUser && typeof responseTimeSeconds === 'number' && Number.isFinite(responseTimeSeconds) && (
+          <p className={styles.responseTime}>Response time: {responseTimeSeconds.toFixed(1)}s</p>
         )}
       </div>
     </article>

@@ -5,6 +5,7 @@ from langgraph.graph.message import add_messages
 
 class ChatState(TypedDict, total=False):
     messages: Annotated[list[AnyMessage], add_messages]
+    request_started_at: float
     question: str
     category: str
     route: str

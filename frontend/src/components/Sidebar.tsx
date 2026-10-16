@@ -1,37 +1,32 @@
-import { BookOpen, Database, Layers, MessageSquare, Plus, ShieldCheck } from 'lucide-react';
+import { BookOpen, Layers, MessageSquare, Plus, Trash2 } from 'lucide-react';
 import type { View } from '../app/view';
 import styles from './Sidebar.module.css';
 
 interface SidebarProps {
+  history: readonly { id: string; title: string }[];
+  activeThreadId: string;
+  onDeleteThread: (id: string) => void;
+  onOpenThread: (id: string) => void;
   view: View;
   onNavigate: (view: View) => void;
   onNewChat: () => void;
   newChatDisabled: boolean;
   /** null while the library is still loading. */
   fileCount: number | null;
-  indexedCount: number;
-  chunkCount: number;
-  /** null until the first library request settles. */
-  online: boolean | null;
+
 }
 
-const CONNECTION_LABEL = {
-  online: 'Backend connected',
-  offline: 'Backend unreachable',
-  unknown: 'Checking backend',
-} as const;
-
 export function Sidebar({
+  history,
+  activeThreadId,
+  onOpenThread,
+  onDeleteThread,
   view,
   onNavigate,
   onNewChat,
   newChatDisabled,
   fileCount,
-  indexedCount,
-  chunkCount,
-  online,
 }: SidebarProps) {
-  const connection = online === null ? 'unknown' : online ? 'online' : 'offline';
   return (
     <div className={styles.sidebar}>
       <a className={styles.brand} href="/" aria-label="ISO knowledge workspace home">
@@ -48,18 +43,30 @@ export function Sidebar({
         <Plus size={16} aria-hidden="true" /> New conversation
       </button>
 
-      <nav className={styles.nav} aria-labelledby="sidebar-nav-label">
-        <p id="sidebar-nav-label" className={styles.navLabel}>
-          Workspace
-        </p>
-        <button
-          type="button"
-          className={styles.navItem}
-          aria-current={view === 'chat' ? 'page' : undefined}
-          onClick={() => onNavigate('chat')}
-        >
-          <MessageSquare size={17} aria-hidden="true" /> Ask your documents
-        </button>
+      <section className={styles.history} aria-labelledby="chat-history-title">
+        <h2 id="chat-history-title" className={styles.navLabel}>Chat history</h2>
+        {history.length === 0 ? <p className={styles.emptyHistory}>Your conversations will appear here.</p> : (
+          <ul className={styles.historyList}>
+            {history.map((item) => (
+              <li key={item.id} className={styles.historyRow}>
+                <button type="button" className={styles.navItem}
+                  aria-current={view === 'chat' && activeThreadId === item.id ? 'page' : undefined}
+                  disabled={newChatDisabled} onClick={() => onOpenThread(item.id)} title={item.title}>
+                  <MessageSquare size={15} aria-hidden="true" />
+                  <span className={styles.historyTitle}>{item.title}</span>
+                </button>
+                <button type="button" className={styles.deleteChat}
+                  aria-label={`Delete chat: ${item.title}`} title="Delete chat"
+                  onClick={() => onDeleteThread(item.id)}>
+                  <Trash2 size={14} aria-hidden="true" />
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <nav className={styles.footer} aria-label="Document library">
         <button
           type="button"
           className={styles.navItem}
@@ -70,33 +77,6 @@ export function Sidebar({
           <span className={styles.count}>{fileCount ?? '—'}</span>
         </button>
       </nav>
-
-      <section className={styles.card} aria-labelledby="sidebar-card-title">
-        <ShieldCheck size={19} className={styles.cardIcon} aria-hidden="true" />
-        <h2 id="sidebar-card-title" className={styles.cardTitle}>
-          Your documents. Clear answers.
-        </h2>
-        <p className={styles.cardText}>
-          Ask naturally and get answers with sources. The assistant asks a follow-up when it needs more detail.
-        </p>
-      </section>
-
-      <div className={styles.status}>
-        <Database size={16} aria-hidden="true" />
-        <div>
-          Local knowledge base
-          <small>
-            {indexedCount} documents · {chunkCount} chunks
-          </small>
-        </div>
-        <span
-          className={styles.dot}
-          data-state={connection}
-          role="img"
-          aria-label={CONNECTION_LABEL[connection]}
-          title={CONNECTION_LABEL[connection]}
-        />
-      </div>
     </div>
   );
 }
